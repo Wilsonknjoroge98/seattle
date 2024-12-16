@@ -22,11 +22,6 @@ function App() {
     console.log(position.coords.latitude, position.coords.longitude);
   });
 
-  useEffect(() => {
-    const sessionId = uuidv4();
-    setUuid(sessionId);
-  }, []);
-
   const handleClick = async () => {
     const url =
       import.meta.env.MODE === 'development'
@@ -48,25 +43,42 @@ function App() {
 
   useEffect(() => {
     const main = async () => {
+      const sessionId = uuidv4();
+      setUuid(sessionId);
       const userAgent = navigator.userAgent ? navigator.userAgent : 'unknown';
       const language = navigator.language ? navigator.language : 'unknown';
-      const coords = navigator.geolocation.getCurrentPosition((position) => {
-        return {
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
-        };
-      });
-
       const url =
         import.meta.env.MODE === 'development'
           ? 'http://127.0.0.1:5001/seattle-62e4f/us-central1/app'
           : 'https://app-w2lhv3fh2a-uc.a.run.app';
 
+      let coords = {};
+
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        coords = {
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        };
+
+        await axios({
+          method: 'get',
+          url,
+          params: {
+            uuid: uuid || sessionId,
+            preciseCoords: coords,
+            browser: {
+              'userAgent': userAgent,
+              'language': language,
+            },
+          },
+        });
+      });
+
       await axios({
         method: 'get',
         url,
         params: {
-          uuid,
+          uuid: uuid || sessionId,
           preciseCoords: coords,
           browser: {
             'userAgent': userAgent,
@@ -75,6 +87,7 @@ function App() {
         },
       });
     };
+
     main();
   }, []);
   return (
